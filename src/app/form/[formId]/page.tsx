@@ -1,79 +1,24 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import { useFormularios } from "~/contexts/formularios.context";
 import type { Pergunta } from "~/entities/pergunta.entity";
+import { useFormRenderer } from "./_hooks/use-form-renderer";
 
 const Page = () => {
-  const params = useParams();
-  const { formularios, perguntas, opcoesRespostas, condicoesPerguntas } =
-    useFormularios();
-
-  const [respostas, setRespostas] = useState<Record<string, any>>({});
-
-  const formId = params.formId as string;
-
-  const formulario = useMemo(
-    () => formularios.find((f) => f.id === formId),
-    [formularios, formId],
-  );
-
-  const perguntasDoFormulario = useMemo(
-    () =>
-      perguntas
-        .filter((p) => p.id_formulario === formId)
-        .sort((a, b) => a.ordem - b.ordem),
-    [perguntas, formId],
-  );
-
-  const handleRespostaChange = (perguntaId: string, valor: any) => {
-    setRespostas((prev) => ({ ...prev, [perguntaId]: valor }));
-  };
-
-  const handleMultiplaEscolhaChange = useCallback(
-    (perguntaId: string, opcaoId: string, checked: boolean) => {
-      setRespostas((prev) => {
-        const respostasAnteriores: string[] = prev[perguntaId] || [];
-        if (checked) {
-          return { ...prev, [perguntaId]: [...respostasAnteriores, opcaoId] };
-        }
-        return {
-          ...prev,
-          [perguntaId]: respostasAnteriores.filter((id) => id !== opcaoId),
-        };
-      });
-    },
-    [],
-  );
-
-  const isPerguntaVisivel = (pergunta: Pergunta): boolean => {
-    if (!pergunta.sub_pergunta) {
-      return true;
-    }
-    const condicao = condicoesPerguntas[pergunta.id];
-    if (!condicao) {
-      // Se é uma sub-pergunta mas não tem condição, não deve ser visível.
-      return false;
-    }
-
-    const respostaPai = respostas[condicao.perguntaId];
-    if (!respostaPai) {
-      return false;
-    }
-
-    if (Array.isArray(respostaPai)) {
-      // Para múltipla escolha
-      return respostaPai.includes(condicao.opcaoId);
-    }
-    // Para escolha única
-    return respostaPai === condicao.opcaoId;
-  };
+  const {
+    formulario,
+    perguntasDoFormulario,
+    opcoesRespostas,
+    respostas,
+    handleRespostaChange,
+    handleMultiplaEscolhaChange,
+    isPerguntaVisivel,
+    handleSubmit,
+  } = useFormRenderer();
 
   const renderInput = (pergunta: Pergunta) => {
     switch (pergunta.tipo_pergunta) {
@@ -171,15 +116,6 @@ const Page = () => {
       default:
         return <p>Tipo de pergunta não suportado.</p>;
     }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Respostas enviadas:", respostas);
-    alert(
-      "Formulário respondido com sucesso! Verifique o console para ver os dados.",
-    );
-    // Aqui você normalmente enviaria o objeto `respostas` para um servidor
   };
 
   if (!formulario) {
